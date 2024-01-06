@@ -69,10 +69,11 @@ AppTab::AppTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
     SetSizer(sizer);
 }
 
+static wxColour color;
 SettingsFrame::SettingsFrame(int page) : wxDialog(nullptr, wxID_ANY, "Settings")
 {
     //Bind(wxEVT_CLOSE_WINDOW, &SettingsFrame::OnExit, this, wxID_ANY);
-    if(!FileExists("settings.json"))
+    if (!FileExists("settings.json"))
     {
         SaveSettings(g_defaultSettings); // save default settings file if the settings file does not exist
     }
