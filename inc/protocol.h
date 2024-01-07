@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "serial.h"
+
 #define CMD_FAMILY_SYSTEM 255
 #define CMD_ID_SYSTEM_ACK 255
 #define CMD_ID_SYSTEM_ACKR 254
@@ -52,6 +54,8 @@ struct HardwareState
 };
 
 #pragma pack(pop)
+
+void SendPacket(CallbackAsyncSerial* serial, Packet& pkt);
 
 namespace Packets
 {

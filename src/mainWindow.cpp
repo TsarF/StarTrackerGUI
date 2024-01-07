@@ -14,6 +14,8 @@ std::vector<std::string> serialPorts{};
 
 SettingsFrame* settingsFrame;
 
+unsigned int updateTimerTicks = 0;
+
 typedef struct
 {
     float joySpeedX;
@@ -93,19 +95,17 @@ void MainFrame::UpdateStatus()
     if (g_serialPort->isOpen())
     {
         statusStr += "Connected\n";
-
-        g_serialPort->write((char*)(&Packets::GetHWState()), 3);
     }
     else
     {
         statusStr += "Disconnected\n";
     }
+
     statusStr += "Joystick:\t";
     if (wxWidgetsjoystick->IsOk())
     {
         statusStr += "Connected\n";
-        char* data = Packets::convert(Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
-        g_serialPort->write(data, 16 + 3);
+        SendPacket(g_serialPort, Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
     }
     else
     {
@@ -159,10 +159,41 @@ void MainFrame::UpdateJoystick()
     }
 }
 
+void MainFrame::SerialHeartbeat()
+{
+    try
+    {
+        SendPacket(g_serialPort, Packets::ACK());
+        g_serialHeartbeatSeconds++;
+        if (g_serialHeartbeatSeconds > SERIAL_TIMEOUT_SECONDS)
+        {
+            if (g_serialPort->isOpen())
+            {
+                g_serialPort->close();
+            }
+        }
+    }
+    catch (std::exception ex)
+    {
+        if (errno != 0)
+        {
+            wxMessageBox(string_format("An exception occured: %s", ex.what()), "Error", wxICON_ERROR | wxOK);
+            g_serialPort->close();
+        }
+        return;
+    }
+}
+
 void MainFrame::OnUpdateTimer(wxTimerEvent& event)
 {
+    updateTimerTicks++;
     UpdateJoystick();
     UpdateStatus();
+    if (!(updateTimerTicks % 50))
+    {
+        SerialHeartbeat();
+        SendPacket(g_serialPort, Packets::GetHWState());
+    }
 }
 
 void MainFrame::OnJoystick(wxJoystickEvent& event)
@@ -192,23 +223,28 @@ void MainFrame::OnConnect(wxCommandEvent& event)
 {
     try
     {
-        if (g_settings.serialPort.empty())
-        {
-            wxMessageBox("Please select a serial port in Settings -> Connection", "Error", wxICON_ERROR | wxOK);
-            return;
-        }
-        delete g_serialPort;
-        g_serialPort = new CallbackAsyncSerial(g_settings.serialPort, g_settings.serialBaudRate);
-        g_serialPort->setCallback(OnSerialReceive);
         if (!g_serialPort->isOpen())
         {
-            wxMessageBox("Failed opening serial port", "Error", wxICON_ERROR | wxOK);
-            return;
+            if (g_settings.serialPort.empty())
+            {
+                wxMessageBox("Please select a serial port in Settings -> Connection", "Error", wxICON_ERROR | wxOK);
+                return;
+            }
+            g_serialPort->open(g_settings.serialPort, g_settings.serialBaudRate);
+            if (!g_serialPort->isOpen())
+            {
+                wxMessageBox("Failed opening serial port", "Error", wxICON_ERROR | wxOK);
+                g_serialPort->close();
+                return;
+            }
+            g_serialPort->setCallback(OnSerialReceive);
+            g_serialHeartbeatSeconds = 0;
         }
     }
     catch (std::exception ex)
     {
         wxMessageBox(string_format("An exception occured: %s", ex.what()), "Error", wxICON_ERROR | wxOK);
+        g_serialPort->close();
         return;
     }
 }

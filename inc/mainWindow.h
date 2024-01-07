@@ -7,9 +7,6 @@ class MainFrame : public wxFrame
 public:
     MainFrame();
 
-    void UpdateStatus();
-    void UpdateJoystick();
-
 private:
     wxTimer* updateTimer;
     
@@ -22,6 +19,10 @@ private:
 
     wxStaticBoxSizer* toolSizer;
     wxButton* connectButton;
+
+    void UpdateStatus();
+    void UpdateJoystick();
+    void SerialHeartbeat();
 
     void OnUpdateTimer(wxTimerEvent& event);
     void OnJoystick(wxJoystickEvent& event);

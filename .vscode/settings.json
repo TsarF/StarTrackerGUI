@@ -88,6 +88,10 @@
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
         "xlocmon": "cpp",
-        "xloctime": "cpp"
+        "xloctime": "cpp",
+        "ranges": "cpp",
+        "filesystem": "cpp",
+        "numeric": "cpp",
+        "valarray": "cpp"
     }
 }
