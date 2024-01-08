@@ -2,9 +2,10 @@
 #include <string>
 #include <vector>
 #include <mutex>
-#include "serial.h"
+#include <serial.h>
 #include "settings.h"
 #include "protocol.h"
+
 
 #define SOFTWARE_VERSION 1,0,0,0
 

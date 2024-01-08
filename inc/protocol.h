@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "serial.h"
+#include <serial.h>
 
 #define CMD_FAMILY_SYSTEM 255
 #define CMD_ID_SYSTEM_ACK 255
