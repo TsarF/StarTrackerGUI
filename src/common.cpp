@@ -1,7 +1,7 @@
 #include "common.h"
 
 std::vector<std::string> g_availableSerialPorts{};
-CallbackAsyncSerial* g_serialPort = new CallbackAsyncSerial();
+serial::Serial g_serialPort{};
 unsigned int g_serialHeartbeatSeconds = 0;
 std::mutex g_serialMutex{};
 

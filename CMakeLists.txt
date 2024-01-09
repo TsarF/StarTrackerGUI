@@ -34,6 +34,7 @@ target_include_directories(StarTrackerGUI PRIVATE inc)
 target_include_directories(testConversion PRIVATE inc)
 
 target_include_directories(StarTrackerGUI PRIVATE libs/serial/include)
+target_include_directories(testConversion PRIVATE libs/serial/include)
 
 include_directories(${Boost_INCLUDE_DIR})
 
@@ -43,7 +44,7 @@ target_link_libraries(StarTrackerGUI PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(StarTrackerGUI PRIVATE Eigen3::Eigen)
 
 target_link_libraries(testConversion PRIVATE wx::core wx::base)
-target_link_libraries(StarTrackerGUI PRIVATE serial)
+target_link_libraries(testConversion PRIVATE serial)
 target_link_libraries(testConversion PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(testConversion PRIVATE Eigen3::Eigen)
 

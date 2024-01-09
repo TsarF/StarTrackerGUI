@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include <serial.h>
+#include "serial/serial.h"
 
 #define CMD_FAMILY_SYSTEM 255
 #define CMD_ID_SYSTEM_ACK 255
@@ -55,8 +55,6 @@ struct HardwareState
 
 #pragma pack(pop)
 
-void SendPacket(CallbackAsyncSerial* serial, Packet& pkt);
-
 namespace Packets
 {
     Packet Joystick(float x, float y, float speed, uint32_t buttons);
@@ -64,6 +62,10 @@ namespace Packets
     Packet GetHWState();
 
     char* convert(Packet p);
+    void dataToPkt(const char* data, Packet& pkt);
 };
+
+void SendPacket(serial::Serial& serial, Packet& pkt);
+bool GetPacket(serial::Serial& serial, Packet* pkt = nullptr);
 
 void OnSerialReceive(const char* data, size_t size);

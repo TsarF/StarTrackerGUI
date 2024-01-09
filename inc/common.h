@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <mutex>
-#include <serial.h>
+#include "serial/serial.h"
 #include "settings.h"
 #include "protocol.h"
 
@@ -12,7 +12,7 @@
 #define SERIAL_TIMEOUT_SECONDS 5
 
 extern std::vector<std::string> g_availableSerialPorts;
-extern CallbackAsyncSerial* g_serialPort;
+extern serial::Serial g_serialPort;
 extern unsigned int g_serialHeartbeatSeconds;
 extern std::mutex g_serialMutex;
 

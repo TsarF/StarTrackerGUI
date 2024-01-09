@@ -2,14 +2,27 @@
 #include "utils.h"
 #include "common.h"
 
-void SendPacket(CallbackAsyncSerial* serial, Packet& pkt)
+void SendPacket(serial::Serial& serial, Packet& pkt)
 {
-    if (serial->isOpen())
+    if (serial.isOpen())
     {
-        char* data = Packets::convert(pkt);
-        serial->write(data, pkt.length + 3);
+        uint8_t* data = (uint8_t * )Packets::convert(pkt);
+        serial.write(data, pkt.length + 3);
         delete data;
     }
+}
+
+bool GetPacket(serial::Serial& serial, Packet* pkt)
+{
+    uint8_t buffer[255];
+    serial.read(buffer, 1);
+    serial.read(buffer + 1, buffer[0]+2);
+    OnSerialReceive((const char*)buffer, buffer[0] + 2);
+    if (pkt != nullptr)
+    {
+        Packets::dataToPkt((const char*)buffer, *pkt);
+    }
+    return true;
 }
 
 Packet Packets::Joystick(float x, float y, float speed, uint32_t buttons)
@@ -41,6 +54,15 @@ char* Packets::convert(Packet p)
     return pkt;
 }
 
+void Packets::dataToPkt(const char* data, Packet& pkt)
+{
+    pkt = Packet{ ((uint8_t*)data)[0], ((uint8_t*)data)[1], ((uint8_t*)data)[2] };
+    for (int i = 0; i < pkt.length; i++)
+    {
+        pkt.data.push_back(data[3 + i]);
+    }
+}
+
 void ProcessReadCMD(Packet pkt)
 {
     switch (pkt.cmd_id)
@@ -63,12 +85,8 @@ void ProcessSystemCMD(Packet pkt)
 
 void OnSerialReceive(const char* data, size_t size)
 {
-    Packet pkt = Packet{ ((uint8_t*)data)[0], ((uint8_t*)data)[1], ((uint8_t*)data)[2] };
-    for (int i = 0; i < pkt.length; i++)
-    {
-        pkt.data.push_back(data[3 + i]);
-    }
-
+    Packet pkt;
+    Packets::dataToPkt(data, pkt);
     switch (pkt.family)
     {
     case CMD_FAMILY_SYSTEM:

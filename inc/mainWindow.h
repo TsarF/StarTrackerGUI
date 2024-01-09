@@ -1,6 +1,7 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/joystick.h>
+#include "serial/serial.h"
 
 class MainFrame : public wxFrame
 {
@@ -28,6 +29,7 @@ private:
     void OnJoystick(wxJoystickEvent& event);
     void OnExit(wxCloseEvent& event);
     void OnSettings(wxCommandEvent& event);
+    void OnSerialTimeout(serial::Serial& serial);
 
     void OnConnect(wxCommandEvent& event);
     
