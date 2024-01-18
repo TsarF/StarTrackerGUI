@@ -1,4 +1,4 @@
-#include "tashimiTaki.h"
+#include "toshimiTaki.h"
 #include "Eigen/Dense"
 
 // time -> in units of clock angle: 12h = pi; 6h = pi/2; 3h = pi/4...

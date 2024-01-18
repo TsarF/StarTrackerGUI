@@ -4,6 +4,7 @@
 #include "settingsWindow.h"
 #include "common.h"
 #include "utils.h"
+#include "firmwareUpdateWindow.h"
 
 #include <vector>
 #include <exception>
@@ -13,6 +14,7 @@
 std::vector<std::string> serialPorts{};
 
 SettingsFrame* settingsFrame;
+FirmwareUpdateFrame* firmwareUpdateFrame;
 
 unsigned int updateTimerTicks = 0;
 
@@ -26,16 +28,55 @@ typedef struct
 
 Joystick_t joy;
 
-void MainFrame::Build_Strip(wxMenuBar *menuBar)
+PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
+{
+    mainSizer = new wxBoxSizer(wxVERTICAL);
+    star1Sizer = new wxBoxSizer(wxHORIZONTAL);
+    star1RATextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
+    star1DECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
+    star2Sizer = new wxBoxSizer(wxHORIZONTAL);
+    star2RATextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
+    star2DECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
+
+    star1Sizer->Add(star1RATextbox, 0, wxALL | wxEXPAND, 3);
+    star1Sizer->Add(star1DECTextbox, 0, wxALL | wxEXPAND, 3);
+
+    star2Sizer->Add(star2RATextbox, 0, wxALL | wxEXPAND, 3);
+    star2Sizer->Add(star2DECTextbox, 0, wxALL | wxEXPAND, 3);
+
+    mainSizer->Add(star1Sizer, 0, wxALL, 3);
+    mainSizer->Add(star2Sizer, 0, wxALL, 3);
+
+    SetSizer(mainSizer);
+}
+
+MosaicTab::MosaicTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
+{
+
+}
+
+DitheringTab::DitheringTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
+{
+
+}
+
+CameraControlTab::CameraControlTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
+{
+
+}
+
+void MainFrame::Build_Strip(wxMenuBar* menuBar)
 {
     wxMenu *menuSettings = new wxMenu;
-
     menuSettings->Append(0, "&Connection");
     Bind(wxEVT_MENU, &MainFrame::OnSettings, this, 0);
 
-
+    wxMenu* menuTools = new wxMenu;
+    menuTools->Append(1, "&Firmware Update");
+    Bind(wxEVT_MENU, &MainFrame::OnFirnmwareUpdate, this, 1);
 
     menuBar->Append(menuSettings, "&Settings");
+    menuBar->Append(menuTools, "&Tools");
 }
 
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
@@ -73,17 +114,49 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
     gridSizer = new wxGridSizer(2, 2, wxSize(3, 3));
     
     statusSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Status");
-    statusText = new wxStaticText(this, wxID_ANY, "Status will be displayed here");
+    for (int i = 0; i < statusLabels.size(); i++)
+    {
+        statusLabels[i] = new wxStaticText(this, wxID_ANY, "Status will be displayed here");
+        statusSizer->Add(statusLabels[i], 0, wxALL | wxEXPAND, 3);
+    }
     gridSizer->Add(statusSizer, 0, wxALL | wxEXPAND, 3);
-    statusSizer->Add(statusText, 0, wxALL | wxEXPAND, 3);
 
     toolSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Device");
+
+    serialComboBox = new wxComboBox(this, wxID_ANY, "Serial Port", wxDefaultPosition, wxDefaultSize);// wxSize(40, 10));
+    serialComboBox->Bind(wxEVT_COMBOBOX, &MainFrame::OnSerialComboBox, this);
+    serialComboBox->Bind(wxEVT_COMBOBOX_DROPDOWN, &MainFrame::OnSerialComboBoxDrop, this);
     connectButton = new wxButton(this, wxID_ANY, "Connect");
     connectButton->Bind(wxEVT_BUTTON, &MainFrame::OnConnect, this, wxID_ANY);
-    gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
-    toolSizer->Add(connectButton, 0, wxALL | wxEXPAND, 3);
+    wxBoxSizer* serialSizer = new wxBoxSizer(wxHORIZONTAL);
+    serialSizer->Add(serialComboBox, 1, wxALL | wxEXPAND, 3);
+    serialSizer->Add(connectButton, 3, wxALL | wxEXPAND, 3);
+    QuerySerialPorts(g_availableSerialPorts);
+    serialComboBox->Clear();
+    for (int i = 0; i < g_availableSerialPorts.size(); i++)
+    {
+        serialComboBox->Append(g_availableSerialPorts[i].c_str());
+    }
+    serialComboBox->Refresh();
 
-    mainSizer->Add(gridSizer, 0, wxALL | wxEXPAND, 3);
+    gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
+    toolSizer->Add(serialSizer, 0, wxALL | wxEXPAND, 3);
+
+    utilitiesNotebook = new wxNotebook(this, wxID_ANY);
+    polarAlignmentTab = new PolarAlignmentTab(utilitiesNotebook);
+    mosaicTab = new MosaicTab(utilitiesNotebook);
+    ditheringTab = new DitheringTab(utilitiesNotebook);
+    cameraControlTab = new CameraControlTab(utilitiesNotebook);
+    utilitiesNotebook->AddPage(polarAlignmentTab, "Polar Alignment");
+    utilitiesNotebook->AddPage(mosaicTab, "Mosaic");
+    utilitiesNotebook->AddPage(ditheringTab, "Dithering");
+    utilitiesNotebook->AddPage(cameraControlTab, "Camera Control");
+
+    utilitiesSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Utilities");
+    utilitiesSizer->Add(utilitiesNotebook, 1, wxALL | wxEXPAND, 3);
+    gridSizer->Add(utilitiesSizer, 1, wxALL | wxEXPAND, 3);
+
+    mainSizer->Add(gridSizer, 1, wxALL | wxEXPAND, 3);
     SetSizer(mainSizer);
     SetMenuBar(menuBar);
     SetClientSize(720, 640);
@@ -98,36 +171,49 @@ void MainFrame::UpdateStatus()
     statusStr += "Device:\t";
     if (g_serialPort.isOpen())
     {
-        statusStr += "Connected\n";
+        statusStr += "Connected";
     }
     else
     {
-        statusStr += "Disconnected\n";
+        statusStr += "Disconnected";
     }
+    statusLabels[0]->SetLabelText(wxString(statusStr));
+    statusStr = "";
 
     statusStr += "Joystick:\t";
     if (wxWidgetsjoystick->IsOk())
     {
-        statusStr += "Connected\n";
+        statusStr += "Connected";
         SendPacket(g_serialPort, Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
     }
     else
     {
-        statusStr += "Disconnected\n";
+        statusStr += "Disconnected";
     }
+    statusLabels[1]->SetLabelText(wxString(statusStr));
+    statusStr = "";
 
     statusStr += "RA:\t";
-    statusStr += string_format("%.4f\n", g_HWstate.positionRA);
-    statusStr += "DEC:\t";
-    statusStr += string_format("%.4f\n", g_HWstate.positionDEC);
+    statusStr += string_format("%.4f", g_HWstate.positionRA);
+    statusLabels[2]->SetLabelText(wxString(statusStr));
+    statusStr = "";
 
-    statusStr += "\nFirmware version:\t";
-    statusStr += string_format("%i.%i.%i build %i\n", GET_4BYTES(g_HWstate.firwareVersion));
+    statusStr += "DEC:\t";
+    statusStr += string_format("%.4f", g_HWstate.positionDEC);
+    statusLabels[3]->SetLabelText(wxString(statusStr));
+    statusStr = "";
+
+    statusStr += "Firmware version:\t";
+    statusStr += string_format("%i.%i.%i build %i", GET_4BYTES(g_HWstate.firwareVersion));
+    statusLabels[4]->SetLabelText(wxString(statusStr));
+    statusStr = "";
 
     statusStr += "Software version:\t";
-    statusStr += string_format("%i.%i.%i build %i\n", SOFTWARE_VERSION);
+    statusStr += string_format("%i.%i.%i build %i", SOFTWARE_VERSION);
+    statusLabels[5]->SetLabelText(wxString(statusStr));
+    statusStr = "";
 
-    statusText->SetLabelText(wxString(statusStr));
+    statusSizer->Layout();
 }
 
 template <typename T> int sgn(T val) {
@@ -217,14 +303,6 @@ void MainFrame::OnExit(wxCloseEvent& event)
     exit(0);
 }
 
-void MainFrame::OnSettings(wxCommandEvent &event)
-{
-    settingsFrame = new SettingsFrame();
-    settingsFrame->ShowModal();
-    settingsFrame->Close();
-    settingsFrame->Destroy();
-}
-
 void MainFrame::OnConnect(wxCommandEvent& event)
 {
     try
@@ -245,6 +323,8 @@ void MainFrame::OnConnect(wxCommandEvent& event)
                 return;
             }
             g_serialHeartbeatSeconds = 0;
+            SendPacket(g_serialPort, Packets::GetHWState());
+            GetPacket(g_serialPort);
         }
     }
     catch (std::exception ex)
@@ -255,3 +335,37 @@ void MainFrame::OnConnect(wxCommandEvent& event)
     }
 }
 
+
+void MainFrame::OnSettings(wxCommandEvent& event)
+{
+    settingsFrame = new SettingsFrame();
+    settingsFrame->ShowModal();
+    settingsFrame->Close();
+    settingsFrame->Destroy();
+}
+
+void MainFrame::OnFirnmwareUpdate(wxCommandEvent& event)
+{
+    firmwareUpdateFrame = new FirmwareUpdateFrame();
+    firmwareUpdateFrame->ShowModal();
+    firmwareUpdateFrame->Close();
+    firmwareUpdateFrame->Destroy();
+}
+
+void MainFrame::OnSerialComboBox(wxCommandEvent& event)
+{
+    int selectedIndex = serialComboBox->GetSelection();
+    g_settings.serialPort = g_availableSerialPorts[selectedIndex];
+    SaveSettings(g_settings);
+}
+
+void MainFrame::OnSerialComboBoxDrop(wxCommandEvent& event)
+{
+    QuerySerialPorts(g_availableSerialPorts);
+    serialComboBox->Clear();
+    for (int i = 0; i < g_availableSerialPorts.size(); i++)
+    {
+        serialComboBox->Append(g_availableSerialPorts[i].c_str());
+    }
+    serialComboBox->Refresh();
+}

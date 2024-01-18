@@ -8,6 +8,7 @@
 #define CMD_FAMILY_SYSTEM 255
 #define CMD_ID_SYSTEM_ACK 255
 #define CMD_ID_SYSTEM_ACKR 254
+#define CMD_ID_ENTER_BOOT 200
 
 #define CMD_FAMILY_READ 1
 #define CMD_ID_READ_ALIGNMENT_MODE 1
@@ -60,6 +61,7 @@ namespace Packets
     Packet Joystick(float x, float y, float speed, uint32_t buttons);
     Packet ACK();
     Packet GetHWState();
+    Packet EnterBootloader();
 
     char* convert(Packet p);
     void dataToPkt(const char* data, Packet& pkt);

@@ -4,25 +4,43 @@
 
 void SendPacket(serial::Serial& serial, Packet& pkt)
 {
-    if (serial.isOpen())
+    try
     {
-        uint8_t* data = (uint8_t * )Packets::convert(pkt);
-        serial.write(data, pkt.length + 3);
-        delete data;
+        if (serial.isOpen())
+        {
+            uint8_t* data = (uint8_t*)Packets::convert(pkt);
+            serial.write(data, pkt.length + 3);
+            delete data;
+        }
+    }
+    catch (std::exception ex)
+    {
+        serial.close();
     }
 }
 
 bool GetPacket(serial::Serial& serial, Packet* pkt)
 {
-    uint8_t buffer[255];
-    serial.read(buffer, 1);
-    serial.read(buffer + 1, buffer[0]+2);
-    OnSerialReceive((const char*)buffer, buffer[0] + 2);
-    if (pkt != nullptr)
+    try
     {
-        Packets::dataToPkt((const char*)buffer, *pkt);
+        if (serial.isOpen())
+        {
+            uint8_t buffer[255];
+            serial.read(buffer, 1);
+            serial.read(buffer + 1, buffer[0] + 2);
+            OnSerialReceive((const char*)buffer, buffer[0] + 2);
+            if (pkt != nullptr)
+            {
+                Packets::dataToPkt((const char*)buffer, *pkt);
+            }
+            return true;
+        }
     }
-    return true;
+    catch (std::exception ex)
+    {
+        serial.close();
+        return false;
+    }
 }
 
 Packet Packets::Joystick(float x, float y, float speed, uint32_t buttons)
@@ -38,6 +56,11 @@ Packet Packets::ACK()
 Packet Packets::GetHWState()
 {
     return Packet{ 0, CMD_FAMILY_READ, CMD_ID_READ_HWSTATE };
+}
+
+Packet Packets::EnterBootloader()
+{
+    return Packet{ 0, CMD_FAMILY_SYSTEM, CMD_ID_ENTER_BOOT };
 }
 
 char* Packets::convert(Packet p)
