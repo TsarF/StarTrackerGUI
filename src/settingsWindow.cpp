@@ -8,7 +8,7 @@
 
 ConnectionTab::ConnectionTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
 {
-    serialComboBox = new wxComboBox(this, wxID_ANY, "Serial Port", wxDefaultPosition, wxDefaultSize);// wxSize(40, 10));
+    serialComboBox = new wxComboBox(this, wxID_ANY, g_settings.serialPort.empty() ? "Serial Port" : g_settings.serialPort.c_str(), wxDefaultPosition, wxDefaultSize);// wxSize(40, 10));
     QuerySerialPorts(g_availableSerialPorts);
     for(int i = 0; i<g_availableSerialPorts.size(); i++)
     {

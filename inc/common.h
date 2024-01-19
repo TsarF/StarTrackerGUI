@@ -2,9 +2,11 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include "Eigen/Dense"
 #include "serial/serial.h"
 #include "settings.h"
 #include "protocol.h"
+#include "astroUtils.h"
 
 
 #define SOFTWARE_VERSION 1,0,0,0
@@ -20,3 +22,8 @@ extern Settings g_settings;
 extern Settings g_defaultSettings;
 
 extern HardwareState g_HWstate;
+
+extern Eigen::Matrix3f g_calibrationMatrix;
+extern Eigen::Matrix3f g_inverseCalibrationMatrix;
+
+extern CalibrationData_t g_calibrationData;

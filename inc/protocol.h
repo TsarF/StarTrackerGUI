@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "serial/serial.h"
+#include "Eigen/Dense"
 
 #define CMD_FAMILY_SYSTEM 255
 #define CMD_ID_SYSTEM_ACK 255
@@ -26,8 +27,7 @@
 #define CMD_ID_WRITE_FOCAL_LENGTH 4
 #define CMD_ID_WRITE_GUIDE_RATE_RA 5
 #define CMD_ID_WRITE_GUIDE_RATE_DEC 6
-#define CMD_ID_WRITE_CORRECTION_FACTOR 255
-#define CMD_ID_WRITE_CORRECTION_PHASE 254
+#define CMD_ID_WRITE_CORRECTION_MATRICES 255
 
 #define CMD_FAMILY_CONFIG 3
 
@@ -52,6 +52,7 @@ struct HardwareState
     float speedRA;
     float speedDEC;
     float calibrationTransform[9];
+    float inverseCalibrationTransform[9];
 };
 
 #pragma pack(pop)
@@ -62,6 +63,8 @@ namespace Packets
     Packet ACK();
     Packet GetHWState();
     Packet EnterBootloader();
+
+    Packet WriteCalibration(Eigen::Matrix3f calib, Eigen::Matrix3f inverse);
 
     char* convert(Packet p);
     void dataToPkt(const char* data, Packet& pkt);

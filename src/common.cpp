@@ -9,7 +9,12 @@ Settings g_settings;
 Settings g_defaultSettings = 
 {
     "",
-    115200
+    921600
 };
 
 HardwareState g_HWstate{};
+
+Eigen::Matrix3f g_calibrationMatrix;
+Eigen::Matrix3f g_inverseCalibrationMatrix;
+
+CalibrationData_t g_calibrationData;

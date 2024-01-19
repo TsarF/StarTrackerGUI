@@ -3,6 +3,7 @@
 #include <wx/joystick.h>
 #include "serial/serial.h"
 #include "wx/notebook.h"
+#include "Eigen/Dense"
 
 class PolarAlignmentTab : public wxPanel
 {
@@ -10,13 +11,31 @@ public:
     PolarAlignmentTab(wxNotebook* parent);
 
 private:
+    Eigen::Vector2f star1Position;
+    Eigen::Vector2f star1ObservedPosition;
+    float star1Time;
+    Eigen::Vector2f star2Position;
+    Eigen::Vector2f star2ObservedPosition;
+    float star2Time;
+    
     wxBoxSizer* mainSizer;
     wxBoxSizer* star1Sizer;
     wxTextCtrl* star1RATextbox;
     wxTextCtrl* star1DECTextbox;
+    wxTextCtrl* star1ObservedRATextbox;
+    wxTextCtrl* star1ObservedDECTextbox;
+    wxButton* star1AcquireButton;
     wxBoxSizer* star2Sizer;
     wxTextCtrl* star2RATextbox;
     wxTextCtrl* star2DECTextbox;
+    wxTextCtrl* star2ObservedRATextbox;
+    wxTextCtrl* star2ObservedDECTextbox;
+    wxButton* star2AcquireButton;
+    wxButton* calibrateButton;
+    
+    void OnStar1Acquire(wxCommandEvent& event);
+    void OnStar2Acquire(wxCommandEvent& event);
+    void OnCalibrate(wxCommandEvent& event);
 };
 
 class MosaicTab : public wxPanel
@@ -51,7 +70,7 @@ private:
     wxJoystick* wxWidgetsjoystick;
 
     wxBoxSizer* mainSizer;
-    wxGridSizer* gridSizer;
+    wxFlexGridSizer* gridSizer;
     wxStaticBoxSizer* statusSizer;
     std::vector<wxStaticText*> statusLabels{ 6 };
 

@@ -5,6 +5,7 @@
 #include "common.h"
 #include "utils.h"
 #include "firmwareUpdateWindow.h"
+#include "toshimiTaki.h"
 
 #include <vector>
 #include <exception>
@@ -30,24 +31,136 @@ Joystick_t joy;
 
 PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
 {
+    wxFlexGridSizer* textEntryGrid = new wxFlexGridSizer(5, 4, wxSize(0, 0));
+    wxStaticText* raLabel = new wxStaticText(this, wxID_ANY, "RA");
+    wxStaticText* decLabel = new wxStaticText(this, wxID_ANY, "DEC");
+    wxStaticText* star1Label = new wxStaticText(this, wxID_ANY, "Star 1");
+    wxStaticText* star2Label = new wxStaticText(this, wxID_ANY, "Star 2");
+    wxStaticText* star1ObservedLabel = new wxStaticText(this, wxID_ANY, "Observed Star 1");
+    wxStaticText* star2ObservedLabel = new wxStaticText(this, wxID_ANY, "Observed Star 2");
+
     mainSizer = new wxBoxSizer(wxVERTICAL);
-    star1Sizer = new wxBoxSizer(wxHORIZONTAL);
     star1RATextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
     star1DECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
-    star2Sizer = new wxBoxSizer(wxHORIZONTAL);
+    star1ObservedRATextbox = new wxTextCtrl(this, wxID_ANY, "0.0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    star1ObservedDECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    star1AcquireButton = new wxButton(this, wxID_ANY, "Acquire");
+    star1AcquireButton->Bind(wxEVT_BUTTON, &PolarAlignmentTab::OnStar1Acquire, this, wxID_ANY);
     star2RATextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
     star2DECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0");
+    star2ObservedRATextbox = new wxTextCtrl(this, wxID_ANY, "0.0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    star2ObservedDECTextbox = new wxTextCtrl(this, wxID_ANY, "0.0", wxDefaultPosition, wxDefaultSize, wxTE_READONLY);
+    star2AcquireButton = new wxButton(this, wxID_ANY, "Acquire");
+    star2AcquireButton->Bind(wxEVT_BUTTON, &PolarAlignmentTab::OnStar2Acquire, this, wxID_ANY);
 
-    star1Sizer->Add(star1RATextbox, 0, wxALL | wxEXPAND, 3);
-    star1Sizer->Add(star1DECTextbox, 0, wxALL | wxEXPAND, 3);
+    //star1Sizer->Add(star1RATextbox, 0, wxALL | wxEXPAND, 3);
+    //star1Sizer->Add(star1DECTextbox, 0, wxALL | wxEXPAND, 3);
 
-    star2Sizer->Add(star2RATextbox, 0, wxALL | wxEXPAND, 3);
-    star2Sizer->Add(star2DECTextbox, 0, wxALL | wxEXPAND, 3);
+    //star2Sizer->Add(star2RATextbox, 0, wxALL | wxEXPAND, 3);
+    //star2Sizer->Add(star2DECTextbox, 0, wxALL | wxEXPAND, 3);
 
-    mainSizer->Add(star1Sizer, 0, wxALL, 3);
-    mainSizer->Add(star2Sizer, 0, wxALL, 3);
+    textEntryGrid->Add(new wxStaticText(this, wxID_ANY, ""));
+    textEntryGrid->Add(raLabel, 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(decLabel, 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star1Label, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 3);
+    textEntryGrid->Add(star1RATextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star1DECTextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star1ObservedLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 3);
+    textEntryGrid->Add(star1ObservedRATextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star1ObservedDECTextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star1AcquireButton, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2Label, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 3);
+    textEntryGrid->Add(star2RATextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2DECTextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2ObservedLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 3);
+    textEntryGrid->Add(star2ObservedRATextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2ObservedDECTextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2AcquireButton, 0, wxALL | wxEXPAND, 3);
+
+    calibrateButton = new wxButton(this, wxID_ANY, "Calibrate");
+    calibrateButton->Bind(wxEVT_BUTTON, &PolarAlignmentTab::OnCalibrate, this, wxID_ANY);
+
+    mainSizer->Add(textEntryGrid, 0, wxALL, 3);
+    mainSizer->Add(calibrateButton, 0, wxALL | wxEXPAND, 3);
 
     SetSizer(mainSizer);
+}
+
+void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
+{
+    SendPacket(g_serialPort, Packets::GetHWState());
+    GetPacket(g_serialPort);
+    star1ObservedPosition[0] = g_HWstate.positionRA;
+    star1ObservedPosition[1] = g_HWstate.positionDEC;
+    star1Time = g_HWstate.time;
+
+    star1ObservedRATextbox->Clear();
+    star1ObservedRATextbox->WriteText(string_format("%.2f", star1ObservedPosition[0]));
+    star1ObservedDECTextbox->Clear();
+    star1ObservedDECTextbox->WriteText(string_format("%.2f", star1ObservedPosition[1]));
+}
+
+void PolarAlignmentTab::OnStar2Acquire(wxCommandEvent& event)
+{
+    SendPacket(g_serialPort, Packets::GetHWState());
+    GetPacket(g_serialPort);
+    star2ObservedPosition[0] = g_HWstate.positionRA;
+    star2ObservedPosition[1] = g_HWstate.positionDEC;
+    star2Time = g_HWstate.time;
+
+    star2ObservedRATextbox->Clear();
+    star2ObservedRATextbox->WriteText(string_format("%.2f", star2ObservedPosition[0]));
+    star2ObservedDECTextbox->Clear();
+    star2ObservedDECTextbox->WriteText(string_format("%.2f", star2ObservedPosition[1]));
+}
+
+void PolarAlignmentTab::OnCalibrate(wxCommandEvent& event)
+{
+    bool fail = false; // this is so that multiple message boxes can be shown upon one button press
+    if (!validateStringToDegrees(star1RATextbox->GetValue().ToStdString()))
+    {
+        wxMessageBox("Star 1 RA: invalid input", "Error", wxICON_ERROR | wxOK);
+        fail = true;
+    }
+    if (!validateStringToDegrees(star1DECTextbox->GetValue().ToStdString()))
+    {
+        wxMessageBox("Star 1 DEC: invalid input", "Error", wxICON_ERROR | wxOK);
+        fail = true;
+    }
+    if (!validateStringToDegrees(star2RATextbox->GetValue().ToStdString()))
+    {
+        wxMessageBox("Star 2 RA: invalid input", "Error", wxICON_ERROR | wxOK);
+        fail = true;
+    }
+    if (!validateStringToDegrees(star2DECTextbox->GetValue().ToStdString()))
+    {
+        wxMessageBox("Star 2 DEC: invalid input", "Error", wxICON_ERROR | wxOK);
+        fail = true;
+    }
+
+    if (fail)
+    {
+        return;
+    }
+
+    g_calibrationData.star1[0] = d2rf(stringToDegrees(star1RATextbox->GetValue().ToStdString()));
+    g_calibrationData.star1[1] = d2rf(stringToDegrees(star1DECTextbox->GetValue().ToStdString()));
+    g_calibrationData.star1[2] = star1Time;
+
+    g_calibrationData.star2[0] = d2rf(stringToDegrees(star2RATextbox->GetValue().ToStdString()));
+    g_calibrationData.star2[1] = d2rf(stringToDegrees(star2DECTextbox->GetValue().ToStdString()));
+    g_calibrationData.star2[2] = star2Time;
+
+    g_calibrationData.star1Observed[0] = d2rf(star1ObservedPosition[0]);
+    g_calibrationData.star1Observed[1] = d2rf(star1ObservedPosition[1]);
+
+    g_calibrationData.star2Observed[0] = d2rf(star2ObservedPosition[0]);
+    g_calibrationData.star2Observed[1] = d2rf(star2ObservedPosition[1]);
+
+    g_calibrationData.isValid = true;
 }
 
 MosaicTab::MosaicTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
@@ -82,7 +195,7 @@ void MainFrame::Build_Strip(wxMenuBar* menuBar)
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 {
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this, wxID_ANY);
-    SetBackgroundColour(wxColour(240, 240, 240));
+    SetBackgroundColour(wxColour(255, 255, 255));
 
     wxWidgetsjoystick = new wxJoystick();
 
@@ -111,7 +224,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 
     mainSizer = new wxBoxSizer(wxVERTICAL);
     
-    gridSizer = new wxGridSizer(2, 2, wxSize(3, 3));
+    gridSizer = new wxFlexGridSizer(2, 2, wxSize(3, 3));
     
     statusSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Status");
     for (int i = 0; i < statusLabels.size(); i++)
@@ -123,7 +236,9 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 
     toolSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Device");
 
-    serialComboBox = new wxComboBox(this, wxID_ANY, "Serial Port", wxDefaultPosition, wxDefaultSize);// wxSize(40, 10));
+    serialComboBox = new wxComboBox(this, wxID_ANY, g_settings.serialPort.empty() ? "Serial Port" : g_settings.serialPort.c_str(), wxDefaultPosition, wxDefaultSize,
+        wxArrayString(g_availableSerialPorts.size(), (wxString*)g_availableSerialPorts.data()), wxCB_READONLY);// wxSize(40, 10));
+
     serialComboBox->Bind(wxEVT_COMBOBOX, &MainFrame::OnSerialComboBox, this);
     serialComboBox->Bind(wxEVT_COMBOBOX_DROPDOWN, &MainFrame::OnSerialComboBoxDrop, this);
     connectButton = new wxButton(this, wxID_ANY, "Connect");
@@ -139,8 +254,8 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
     }
     serialComboBox->Refresh();
 
-    gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
     toolSizer->Add(serialSizer, 0, wxALL | wxEXPAND, 3);
+    gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
 
     utilitiesNotebook = new wxNotebook(this, wxID_ANY);
     polarAlignmentTab = new PolarAlignmentTab(utilitiesNotebook);
@@ -154,7 +269,13 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 
     utilitiesSizer = new wxStaticBoxSizer(wxVERTICAL, this, "Utilities");
     utilitiesSizer->Add(utilitiesNotebook, 1, wxALL | wxEXPAND, 3);
-    gridSizer->Add(utilitiesSizer, 1, wxALL | wxEXPAND, 3);
+    gridSizer->Add(utilitiesSizer, 0, wxALL | wxEXPAND, 3);
+
+    gridSizer->AddGrowableRow(0, 1);
+    gridSizer->AddGrowableRow(1, 3);
+    gridSizer->AddGrowableCol(0, 3);
+    gridSizer->AddGrowableCol(1, 1);
+    gridSizer->SetFlexibleDirection(wxBOTH);
 
     mainSizer->Add(gridSizer, 1, wxALL | wxEXPAND, 3);
     SetSizer(mainSizer);
@@ -262,6 +383,14 @@ void MainFrame::SerialHeartbeat()
             {
                 g_serialPort.close();
             }
+            g_calibrationData.isValid = false;
+        }
+        if (g_calibrationData.isValid)
+        {
+            ComputerPerfectTransform2Star(g_calibrationMatrix, g_HWstate.time, g_calibrationData.star1[2], g_calibrationData.star1.head<2>(), g_calibrationData.star1Observed.head<2>(),
+                g_calibrationData.star2[2], g_calibrationData.star2.head<2>(), g_calibrationData.star2Observed.head<2>());
+            g_inverseCalibrationMatrix = g_calibrationMatrix.inverse();
+            SendPacket(g_serialPort, Packets::WriteCalibration(g_calibrationMatrix, g_inverseCalibrationMatrix));
         }
     }
     catch (std::exception ex)

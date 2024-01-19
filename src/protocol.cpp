@@ -9,7 +9,17 @@ void SendPacket(serial::Serial& serial, Packet& pkt)
         if (serial.isOpen())
         {
             uint8_t* data = (uint8_t*)Packets::convert(pkt);
-            serial.write(data, pkt.length + 3);
+            uint8_t* delimitedData = new uint8_t[pkt.length + 3 + 8];
+            memcpy(delimitedData, data, pkt.length + 3);
+            delimitedData[pkt.length + 3 + 0] = 0xA5;
+            delimitedData[pkt.length + 3 + 1] = 0xA5;
+            delimitedData[pkt.length + 3 + 2] = 0xA5;
+            delimitedData[pkt.length + 3 + 3] = 0xA5;
+            delimitedData[pkt.length + 3 + 4] = 0xA5;
+            delimitedData[pkt.length + 3 + 5] = 0xA5;
+            delimitedData[pkt.length + 3 + 6] = 0xA5;
+            delimitedData[pkt.length + 3 + 7] = 0xA5;
+            serial.write(delimitedData, pkt.length + 3 + 8);
             delete data;
         }
     }
@@ -41,6 +51,7 @@ bool GetPacket(serial::Serial& serial, Packet* pkt)
         serial.close();
         return false;
     }
+    return true;
 }
 
 Packet Packets::Joystick(float x, float y, float speed, uint32_t buttons)
@@ -61,6 +72,20 @@ Packet Packets::GetHWState()
 Packet Packets::EnterBootloader()
 {
     return Packet{ 0, CMD_FAMILY_SYSTEM, CMD_ID_ENTER_BOOT };
+}
+
+Packet Packets::WriteCalibration(Eigen::Matrix3f calib, Eigen::Matrix3f inverse)
+{
+    return Packet{ sizeof(float) * 9 * 2, CMD_FAMILY_WRITE, CMD_ID_WRITE_CORRECTION_MATRICES,
+    {
+        GET_4BYTES(calib.row(0)[0]), GET_4BYTES(calib.row(0)[1]), GET_4BYTES(calib.row(0)[2]),
+        GET_4BYTES(calib.row(1)[0]), GET_4BYTES(calib.row(1)[1]), GET_4BYTES(calib.row(1)[2]),
+        GET_4BYTES(calib.row(2)[0]), GET_4BYTES(calib.row(2)[1]), GET_4BYTES(calib.row(2)[2]),
+
+        GET_4BYTES(inverse.row(0)[0]), GET_4BYTES(inverse.row(0)[1]), GET_4BYTES(inverse.row(0)[2]),
+        GET_4BYTES(inverse.row(1)[0]), GET_4BYTES(inverse.row(1)[1]), GET_4BYTES(inverse.row(1)[2]),
+        GET_4BYTES(inverse.row(2)[0]), GET_4BYTES(inverse.row(2)[1]), GET_4BYTES(inverse.row(2)[2])
+    } };
 }
 
 char* Packets::convert(Packet p)

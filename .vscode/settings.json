@@ -92,6 +92,7 @@
         "ranges": "cpp",
         "filesystem": "cpp",
         "numeric": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "dense": "cpp"
     }
 }
