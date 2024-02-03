@@ -13,6 +13,8 @@
 
 #define SERIAL_TIMEOUT_SECONDS 5
 
+extern bool g_programShouldExit;
+
 extern std::vector<std::string> g_availableSerialPorts;
 extern serial::Serial g_serialPort;
 extern unsigned int g_serialHeartbeatSeconds;

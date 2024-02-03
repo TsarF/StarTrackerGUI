@@ -27,7 +27,8 @@
 #define CMD_ID_WRITE_FOCAL_LENGTH 4
 #define CMD_ID_WRITE_GUIDE_RATE_RA 5
 #define CMD_ID_WRITE_GUIDE_RATE_DEC 6
-#define CMD_ID_WRITE_CORRECTION_MATRICES 255
+#define CMD_ID_WRITE_CALIBRATION_MATRIX 255
+#define CMD_ID_WRITE_INV_CALIBRATION_MATRIX 254
 
 #define CMD_FAMILY_CONFIG 3
 
@@ -64,12 +65,17 @@ namespace Packets
     Packet GetHWState();
     Packet EnterBootloader();
 
-    Packet WriteCalibration(Eigen::Matrix3f calib, Eigen::Matrix3f inverse);
+    Packet WriteCalibration(Eigen::Matrix3f calib);
+    Packet WriteInvCalibration(Eigen::Matrix3f inverse);
 
     char* convert(Packet p);
     void dataToPkt(const char* data, Packet& pkt);
 };
 
+void StartSerialQueue();
+void StopSerialQueue();
+
+void QueuePacket(Packet& pkt);
 void SendPacket(serial::Serial& serial, Packet& pkt);
 bool GetPacket(serial::Serial& serial, Packet* pkt = nullptr);
 

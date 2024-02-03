@@ -91,7 +91,7 @@ PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_
 
 void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 {
-    SendPacket(g_serialPort, Packets::GetHWState());
+    QueuePacket(Packets::GetHWState());
     GetPacket(g_serialPort);
     star1ObservedPosition[0] = g_HWstate.positionRA;
     star1ObservedPosition[1] = g_HWstate.positionDEC;
@@ -105,7 +105,7 @@ void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 
 void PolarAlignmentTab::OnStar2Acquire(wxCommandEvent& event)
 {
-    SendPacket(g_serialPort, Packets::GetHWState());
+    QueuePacket(Packets::GetHWState());
     GetPacket(g_serialPort);
     star2ObservedPosition[0] = g_HWstate.positionRA;
     star2ObservedPosition[1] = g_HWstate.positionDEC;
@@ -161,6 +161,14 @@ void PolarAlignmentTab::OnCalibrate(wxCommandEvent& event)
     g_calibrationData.star2Observed[1] = d2rf(star2ObservedPosition[1]);
 
     g_calibrationData.isValid = true;
+
+
+    ComputerPerfectTransform2Star(g_calibrationMatrix, g_HWstate.time, g_calibrationData.star1[2], g_calibrationData.star1.head<2>(), g_calibrationData.star1Observed.head<2>(),
+        g_calibrationData.star2[2], g_calibrationData.star2.head<2>(), g_calibrationData.star2Observed.head<2>());
+    
+    g_inverseCalibrationMatrix = g_calibrationMatrix.inverse();
+    QueuePacket(Packets::WriteCalibration(g_calibrationMatrix));
+    QueuePacket(Packets::WriteInvCalibration(g_inverseCalibrationMatrix));
 }
 
 MosaicTab::MosaicTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
@@ -213,6 +221,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
     g_serialPort.setPort(g_settings.serialPort);
     g_serialPort.setTimeout(1000, 1000, 1, 1000, 1);
     g_serialPort.setBaudrate(g_settings.serialBaudRate);
+    StartSerialQueue();
 
     wxMenuBar* menuBar = new wxMenuBar;
 
@@ -305,7 +314,7 @@ void MainFrame::UpdateStatus()
     if (wxWidgetsjoystick->IsOk())
     {
         statusStr += "Connected";
-        SendPacket(g_serialPort, Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
+        QueuePacket(Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
     }
     else
     {
@@ -374,8 +383,7 @@ void MainFrame::SerialHeartbeat()
 {
     try
     {
-        SendPacket(g_serialPort, Packets::ACK());
-        GetPacket(g_serialPort);
+        QueuePacket(Packets::ACK());
         g_serialHeartbeatSeconds++;
         if (g_serialHeartbeatSeconds > SERIAL_TIMEOUT_SECONDS)
         {
@@ -384,13 +392,6 @@ void MainFrame::SerialHeartbeat()
                 g_serialPort.close();
             }
             g_calibrationData.isValid = false;
-        }
-        if (g_calibrationData.isValid)
-        {
-            ComputerPerfectTransform2Star(g_calibrationMatrix, g_HWstate.time, g_calibrationData.star1[2], g_calibrationData.star1.head<2>(), g_calibrationData.star1Observed.head<2>(),
-                g_calibrationData.star2[2], g_calibrationData.star2.head<2>(), g_calibrationData.star2Observed.head<2>());
-            g_inverseCalibrationMatrix = g_calibrationMatrix.inverse();
-            SendPacket(g_serialPort, Packets::WriteCalibration(g_calibrationMatrix, g_inverseCalibrationMatrix));
         }
     }
     catch (std::exception ex)
@@ -411,8 +412,7 @@ void MainFrame::OnUpdateTimer(wxTimerEvent& event)
         if (g_serialPort.isOpen())
         {
             SerialHeartbeat();
-            SendPacket(g_serialPort, Packets::GetHWState());
-            GetPacket(g_serialPort);
+            QueuePacket(Packets::GetHWState());
         }
     }
 }
@@ -429,6 +429,8 @@ void MainFrame::OnExit(wxCloseEvent& event)
     Destroy();
     event.Skip();
     updateTimer->Stop();
+    g_programShouldExit = true;
+    StopSerialQueue();
     exit(0);
 }
 
@@ -452,7 +454,7 @@ void MainFrame::OnConnect(wxCommandEvent& event)
                 return;
             }
             g_serialHeartbeatSeconds = 0;
-            SendPacket(g_serialPort, Packets::GetHWState());
+            QueuePacket(Packets::GetHWState());
             GetPacket(g_serialPort);
         }
     }

@@ -1,5 +1,7 @@
 #include "common.h"
 
+bool g_programShouldExit = false;
+
 std::vector<std::string> g_availableSerialPorts{};
 serial::Serial g_serialPort{};
 unsigned int g_serialHeartbeatSeconds = 0;
