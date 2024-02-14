@@ -76,14 +76,17 @@ PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_
     textEntryGrid->Add(star2DECTextbox, 0, wxALL | wxEXPAND, 3);
     textEntryGrid->Add(new wxStaticText(this, wxID_ANY, ""), 1, wxALL | wxEXPAND, 3);
     textEntryGrid->Add(star2ObservedLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT, 3);
-    textEntryGrid->Add(star2ObservedRATextbox, 0, wxALL | wxEXPAND, 3);
-    textEntryGrid->Add(star2ObservedDECTextbox, 0, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2ObservedRATextbox, 1, wxALL | wxEXPAND, 3);
+    textEntryGrid->Add(star2ObservedDECTextbox, 1, wxALL | wxEXPAND, 3);
     textEntryGrid->Add(star2AcquireButton, 0, wxALL | wxEXPAND, 3);
+
+    textEntryGrid->AddGrowableCol(1, 2);
+    textEntryGrid->AddGrowableCol(2, 2);
 
     calibrateButton = new wxButton(this, wxID_ANY, "Calibrate");
     calibrateButton->Bind(wxEVT_BUTTON, &PolarAlignmentTab::OnCalibrate, this, wxID_ANY);
 
-    mainSizer->Add(textEntryGrid, 0, wxALL, 3);
+    mainSizer->Add(textEntryGrid, 0, wxALL | wxEXPAND, 3);
     mainSizer->Add(calibrateButton, 0, wxALL | wxEXPAND, 3);
 
     SetSizer(mainSizer);
@@ -98,8 +101,10 @@ void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
     star1Time = g_HWstate.time;
 
     star1ObservedRATextbox->Clear();
+    star1ObservedRATextbox->SelectAll();
     star1ObservedRATextbox->WriteText(string_format("%.2f", star1ObservedPosition[0]));
     star1ObservedDECTextbox->Clear();
+    star1ObservedDECTextbox->SelectAll();
     star1ObservedDECTextbox->WriteText(string_format("%.2f", star1ObservedPosition[1]));
 }
 
@@ -112,8 +117,10 @@ void PolarAlignmentTab::OnStar2Acquire(wxCommandEvent& event)
     star2Time = g_HWstate.time;
 
     star2ObservedRATextbox->Clear();
+    star2ObservedRATextbox->SelectAll();
     star2ObservedRATextbox->WriteText(string_format("%.2f", star2ObservedPosition[0]));
     star2ObservedDECTextbox->Clear();
+    star2ObservedDECTextbox->SelectAll();
     star2ObservedDECTextbox->WriteText(string_format("%.2f", star2ObservedPosition[1]));
 }
 
@@ -189,12 +196,12 @@ CameraControlTab::CameraControlTab(wxNotebook* parent) : wxPanel(parent, wxID_AN
 void MainFrame::Build_Strip(wxMenuBar* menuBar)
 {
     wxMenu *menuSettings = new wxMenu;
-    menuSettings->Append(0, "&Connection");
-    Bind(wxEVT_MENU, &MainFrame::OnSettings, this, 0);
+    menuSettings->Append(1, "&Connection");
+    Bind(wxEVT_MENU, &MainFrame::OnSettings, this, 1);
 
     wxMenu* menuTools = new wxMenu;
-    menuTools->Append(1, "&Firmware Update");
-    Bind(wxEVT_MENU, &MainFrame::OnFirnmwareUpdate, this, 1);
+    menuTools->Append(2, "&Firmware Update");
+    Bind(wxEVT_MENU, &MainFrame::OnFirnmwareUpdate, this, 2);
 
     menuBar->Append(menuSettings, "&Settings");
     menuBar->Append(menuTools, "&Tools");
@@ -203,7 +210,7 @@ void MainFrame::Build_Strip(wxMenuBar* menuBar)
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 {
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this, wxID_ANY);
-    SetBackgroundColour(wxColour(255, 255, 255));
+    //SetBackgroundColour(wxColour(255, 255, 255));
 
     wxWidgetsjoystick = new wxJoystick();
 
@@ -253,8 +260,8 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
     connectButton = new wxButton(this, wxID_ANY, "Connect");
     connectButton->Bind(wxEVT_BUTTON, &MainFrame::OnConnect, this, wxID_ANY);
     wxBoxSizer* serialSizer = new wxBoxSizer(wxHORIZONTAL);
-    serialSizer->Add(serialComboBox, 1, wxALL | wxEXPAND, 3);
-    serialSizer->Add(connectButton, 3, wxALL | wxEXPAND, 3);
+    serialSizer->Add(serialComboBox, 3, wxALL | wxEXPAND, 3);
+    serialSizer->Add(connectButton, 1, wxALL | wxSHRINK, 3);
     QuerySerialPorts(g_availableSerialPorts);
     serialComboBox->Clear();
     for (int i = 0; i < g_availableSerialPorts.size(); i++)
@@ -262,8 +269,9 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
         serialComboBox->Append(g_availableSerialPorts[i].c_str());
     }
     serialComboBox->Refresh();
+    serialComboBox->WriteText(g_settings.serialPort);
 
-    toolSizer->Add(serialSizer, 0, wxALL | wxEXPAND, 3);
+    toolSizer->Add(serialSizer, 0, wxALL | wxSHRINK, 3);
     gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
 
     utilitiesNotebook = new wxNotebook(this, wxID_ANY);
@@ -283,13 +291,12 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
     gridSizer->AddGrowableRow(0, 1);
     gridSizer->AddGrowableRow(1, 3);
     gridSizer->AddGrowableCol(0, 3);
-    gridSizer->AddGrowableCol(1, 1);
     gridSizer->SetFlexibleDirection(wxBOTH);
 
     mainSizer->Add(gridSizer, 1, wxALL | wxEXPAND, 3);
     SetSizer(mainSizer);
     SetMenuBar(menuBar);
-    SetClientSize(720, 640);
+    SetClientSize(1080, 640);
     Show();
 
     UpdateStatus();

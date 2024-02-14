@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #define GET_4BYTES(A) ((uint8_t*)&(A))[0], ((uint8_t*)&(A))[1], ((uint8_t*)&(A))[2], ((uint8_t*)&(A))[3]
 
@@ -25,7 +26,7 @@ std::string string_format(const std::string& format, Args ... args)
 }
 
 void QuerySerialPorts(std::vector<std::string>& portnames);
-bool FileExists(char* path);
+bool FileExists(const char* path);
 std::string Matrix3ToString(Eigen::Matrix3<float> m, bool multiline = false);
 std::string Vector3ToString(Eigen::Vector3<float> v);
 

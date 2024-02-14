@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+#set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_TOOLCHAIN_FILE "~/Documents/repos/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 project(StarTrackerGUI)
 
@@ -17,6 +18,14 @@ src/firmwareUpdateWindow.cpp
 )
 
 set(HEADERS
+inc/protocol.h
+inc/astroUtils.h
+inc/common.h
+inc/firmwareUpdateWindow.h
+inc/mainWindow.h
+inc/settings.h
+inc/settingsWindow.h
+inc/toshimiTaki.h
 inc/platform.h
 inc/utils.h
 )

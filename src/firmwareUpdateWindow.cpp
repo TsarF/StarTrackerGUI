@@ -33,10 +33,10 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         filePath = openFileDialog.GetPath();
     }
 
-    SendPacket(g_serialPort, Packets::EnterBootloader());
+    //SendPacket(g_serialPort, Packets::EnterBootloader());
     g_serialPort.close();
 
-    Sleep(1000);
+    //Sleep(1000);
 
     /* CUBE PROGRAMMER API (DID NOT WORK IN TESTING)
     dfuDeviceInfo* dfuDeviceList;

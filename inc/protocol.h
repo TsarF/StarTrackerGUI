@@ -75,8 +75,8 @@ namespace Packets
 void StartSerialQueue();
 void StopSerialQueue();
 
-void QueuePacket(Packet& pkt);
-void SendPacket(serial::Serial& serial, Packet& pkt);
+void QueuePacket(const Packet& pkt);
+uint8_t SendPacket(serial::Serial& serial, Packet& pkt);
 bool GetPacket(serial::Serial& serial, Packet* pkt = nullptr);
 
 void OnSerialReceive(const char* data, size_t size);

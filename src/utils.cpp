@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <fstream>
+#include <iostream>
 #include <memory>
 
 #define _USE_MATH_DEFINES
@@ -19,8 +20,8 @@
 
 void QuerySerialPorts(std::vector<std::string>& portnames)
 {
-    #ifdef WIN32
     portnames.clear();
+    #ifdef WIN32
     unsigned long portNumbers[255];
     unsigned long portNumbersFound = 0;
     GetCommPorts(portNumbers, 255, &portNumbersFound);
@@ -31,12 +32,43 @@ void QuerySerialPorts(std::vector<std::string>& portnames)
     #endif
     #ifdef MACOS
     io_iterator_t serialPortIterator;
-    kern_return_t result = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching(kIOSerialBSDServiceValue), &serialPortIterator);
+    mach_port_t masterPort;
+    kern_return_t result;
+    CFMutableDictionaryRef  classesToMatch;
+    
+    result = IOMasterPort(MACH_PORT_NULL, &masterPort);
+    if (result != KERN_SUCCESS)
+    {
+        printf("IOMasterPort returned %d\n", result);
+        return;
+    }
+    
+    classesToMatch = IOServiceMatching(kIOSerialBSDServiceValue);
+    if (classesToMatch == NULL)
+    {
+        printf("IOServiceMatching returned a NULL dictionary.\n");
+    }
+    else
+    {
+        CFDictionarySetValue(classesToMatch,
+                             CFSTR(kIOSerialBSDTypeKey),
+                             CFSTR(kIOSerialBSDModemType));
+ 
+        // Each serial device object has a property with key
+        // kIOSerialBSDTypeKey and a value that is one of
+        // kIOSerialBSDAllTypes, kIOSerialBSDModemType,
+        // or kIOSerialBSDRS232Type. You can change the
+        // matching dictionary to find other types of serial
+        // devices by changing the last parameter in the above call
+        // to CFDictionarySetValue.
+    }
+    
+    result = IOServiceGetMatchingServices(masterPort, classesToMatch, &serialPortIterator);
 
     if (result != KERN_SUCCESS)
     {
         std::cerr << "Error: Unable to get matching services." << std::endl;
-        return
+        return;
     }
 
     // Iterate over the available serial ports
@@ -61,13 +93,13 @@ void QuerySerialPorts(std::vector<std::string>& portnames)
     // Release the iterator
     IOObjectRelease(serialPortIterator);
     #endif
-    #ifdef UNIX
+    #ifdef LINUX
     throw std::logic_error(std::string(__FUNCTION_NAME__) + std::string(" function not yet implemented"));
     //TODO: Linux / MACOS implementation
     #endif
 }
 
-bool FileExists(char* path)
+bool FileExists(const char* path)
 {
     std::ifstream file{path};
     return file.good();

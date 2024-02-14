@@ -4,9 +4,12 @@
 
 #include <thread>
 #include <queue>
+#include <utility>
 
 std::thread serialQueueThread;
 std::queue<Packet> serialQueue;
+std::vector<uint8_t> packetWaitlist;
+std::vector<Packet> packetLobby;
 
 void SerialQueueFunction()
 {
@@ -46,7 +49,7 @@ void SendPacket(serial::Serial& serial, Packet& pkt)
                 throw;
             }
             serial.write(data, 64);
-            delete data;
+            delete[] data;
             delete pktData;
         }
     }
@@ -56,7 +59,7 @@ void SendPacket(serial::Serial& serial, Packet& pkt)
     }
 }
 
-void QueuePacket(Packet& pkt)
+void QueuePacket(const Packet& pkt)
 {
     serialQueue.push(pkt);
 }
