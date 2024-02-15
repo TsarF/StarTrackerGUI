@@ -35,7 +35,7 @@ void StopSerialQueue()
     serialQueueThread.join();
 }
 
-void SendPacket(serial::Serial& serial, Packet& pkt)
+uint8_t SendPacket(serial::Serial& serial, Packet& pkt)
 {
     try
     {
