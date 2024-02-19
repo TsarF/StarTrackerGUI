@@ -269,7 +269,8 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
         serialComboBox->Append(g_availableSerialPorts[i].c_str());
     }
     serialComboBox->Refresh();
-    serialComboBox->WriteText(g_settings.serialPort);
+    serialComboBox->SetSelection(std::find(g_availableSerialPorts.begin(), g_availableSerialPorts.end(), g_settings.serialPort) - g_availableSerialPorts.begin());
+    //serialComboBox->WriteText(g_settings.serialPort);
 
     toolSizer->Add(serialSizer, 0, wxALL | wxSHRINK, 3);
     gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);

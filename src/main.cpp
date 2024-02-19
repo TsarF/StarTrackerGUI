@@ -14,6 +14,7 @@ wxIMPLEMENT_APP(App);
 
 bool App::OnInit()
 {
+    //MSWEnable
     MainFrame *frame = new MainFrame();
     frame->Show();
 

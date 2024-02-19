@@ -110,5 +110,5 @@
         "string_view": "cpp"
     },
 
-    "cmake.generator": "Xcode",
+    "cmake.generator": "Visual Studio 16",
 }
