@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+set(CMAKE_TOOLCHAIN_FILE "C:/vcpkg/scripts/buildsystems/vcpkg.cmake")
 #set(CMAKE_TOOLCHAIN_FILE "~/Documents/repos/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 project(StarTrackerGUI)

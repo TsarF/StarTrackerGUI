@@ -94,8 +94,11 @@ PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_
 
 void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 {
-    QueuePacket(Packets::GetHWState());
-    GetPacket(g_serialPort);
+    uint8_t msg_id = QueuePacket(Packets::GetHWState());
+    if(!GetPacket(g_serialPort, msg_id))
+    {
+        wxMessageBox("Unable to get a response", "Error", wxICON_ERROR | wxOK);
+    }
     star1ObservedPosition[0] = g_HWstate.positionRA;
     star1ObservedPosition[1] = g_HWstate.positionDEC;
     star1Time = g_HWstate.time;
@@ -110,8 +113,11 @@ void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 
 void PolarAlignmentTab::OnStar2Acquire(wxCommandEvent& event)
 {
-    QueuePacket(Packets::GetHWState());
-    GetPacket(g_serialPort);
+    uint8_t msg_id = QueuePacket(Packets::GetHWState());
+    if (!GetPacket(g_serialPort, msg_id))
+    {
+        wxMessageBox("Unable to get a response", "Error", wxICON_ERROR | wxOK);
+    }
     star2ObservedPosition[0] = g_HWstate.positionRA;
     star2ObservedPosition[1] = g_HWstate.positionDEC;
     star2Time = g_HWstate.time;
@@ -210,7 +216,9 @@ void MainFrame::Build_Strip(wxMenuBar* menuBar)
 MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 {
     Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnExit, this, wxID_ANY);
-    //SetBackgroundColour(wxColour(255, 255, 255));
+    #ifdef WIN32
+    SetBackgroundColour(wxColour(255, 255, 255));
+    #endif
 
     wxWidgetsjoystick = new wxJoystick();
 
@@ -319,10 +327,11 @@ void MainFrame::UpdateStatus()
     statusStr = "";
 
     statusStr += "Joystick:\t";
-    if (wxWidgetsjoystick->IsOk())
+    if (wxWidgetsjoystick->IsOk()  && g_serialPort.isOpen())
     {
         statusStr += "Connected";
-        QueuePacket(Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
+        uint8_t msg_id = QueuePacket(Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
+        //GetPacket(g_serialPort, msg_id);
     }
     else
     {
@@ -415,7 +424,7 @@ void MainFrame::OnUpdateTimer(wxTimerEvent& event)
     updateTimerTicks++;
     UpdateJoystick();
     UpdateStatus();
-    if (!(updateTimerTicks % 50))
+    if (updateTimerTicks % 10 == 0)
     {
         if (g_serialPort.isOpen())
         {
@@ -462,8 +471,10 @@ void MainFrame::OnConnect(wxCommandEvent& event)
                 return;
             }
             g_serialHeartbeatSeconds = 0;
-            QueuePacket(Packets::GetHWState());
-            GetPacket(g_serialPort);
+            g_serialPort.flushOutput();
+            g_serialPort.flushInput();
+            uint8_t msg_id = QueuePacket(Packets::GetHWState());
+            GetPacket(g_serialPort, msg_id);
         }
     }
     catch (std::exception ex)
