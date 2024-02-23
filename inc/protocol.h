@@ -12,6 +12,7 @@
 #define CMD_ID_SYSTEM_ENTER_BOOT 200
 #define CMD_ID_SYSTEM_FLASH_ERASE 201
 #define CMD_ID_SYSTEM_FLASH_DATA 202
+#define CMD_ID_SYSTEM_RESET 203
 #define CMD_ID_READ_HWSTATE 100
 #define CMD_ID_READ_CALIBRATION_MATRIX 101
 #define CMD_ID_READ_INV_CALIBRATION_MATRIX 102
@@ -65,7 +66,8 @@ namespace Packets
     Message_t GetHWState();
     Message_t EnterBootloader();
     Message_t EraseFlash();
-    Message_t FirmwareChunk(uint8_t* data, uint8_t length);
+    Message_t FirmwareChunk(uint32_t chunkNum, uint8_t* data, uint8_t length);
+    Message_t SystemReset();
 
     Message_t WriteCalibration(const Eigen::Matrix3f calib);
     Message_t WriteInvCalibration(const Eigen::Matrix3f inverse);

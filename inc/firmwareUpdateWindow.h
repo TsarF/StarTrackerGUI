@@ -6,7 +6,8 @@ class FirmwareUpdateFrame : public wxDialog
 public:
     FirmwareUpdateFrame();
 
-    wxTextCtrl* currentProgress;
+    wxStaticText* currentProgress;
+    wxGauge* progressGauge;
 private:
 
     void OnUpload(wxCommandEvent& event);

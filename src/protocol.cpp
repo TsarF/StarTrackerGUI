@@ -7,8 +7,6 @@
 #include <utility>
 #include <chrono>
 
-#define time_now std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()
-
 const int NUM_RETRIES = 5;
 
 std::thread serialSenderThread;
@@ -236,11 +234,16 @@ Message_t Packets::EraseFlash()
     return Message_t{ {0, 0, CMD_ID_SYSTEM_FLASH_ERASE}, {} };
 }
 
-Message_t Packets::FirmwareChunk(uint8_t* data, uint8_t length)
+Message_t Packets::FirmwareChunk(uint32_t chunkNum, uint8_t* data, uint8_t length)
 {
-    Message_t ret{ {0, 0, CMD_ID_SYSTEM_FLASH_DATA}, {} };
-    memcpy(ret.data, data, length);
+    Message_t ret{ {0, 0, CMD_ID_SYSTEM_FLASH_DATA}, {GET_4BYTES(chunkNum)} };
+    memcpy(ret.data + 4, data, length);
     return ret;
+}
+
+Message_t Packets::SystemReset()
+{
+    return Message_t{{0,0,CMD_ID_SYSTEM_RESET}, {}};
 }
 
 Message_t Packets::WriteCalibration(const Eigen::Matrix3f calib)

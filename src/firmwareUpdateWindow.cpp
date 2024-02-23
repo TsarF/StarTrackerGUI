@@ -2,6 +2,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "serial/serial.h"
+#include "utils.h"
 
 #include <istream>
 #include <fstream>
@@ -13,10 +14,13 @@ FirmwareUpdateFrame::FirmwareUpdateFrame() : wxDialog(nullptr, wxID_ANY, "Firmwa
     wxButton* uploadButton = new wxButton(this, wxID_ANY, "Upload");
     uploadButton->Bind(wxEVT_BUTTON, &FirmwareUpdateFrame::OnUpload, this, wxID_ANY);
 
-    currentProgress = new wxTextCtrl(this, wxID_ANY, "Status\n");
+    currentProgress = new wxStaticText(this, wxID_ANY, "Status: ");
+
+    progressGauge = new wxGauge(this, wxID_ANY, 100);
 
     mainSizer->Add(uploadButton, 0, wxALL, 3);
-    mainSizer->Add(currentProgress, 1, wxALL | wxEXPAND, 3);
+    mainSizer->Add(currentProgress, 0, wxALL | wxEXPAND, 3);
+    mainSizer->Add(progressGauge, 0, wxALL | wxEXPAND, 3);
     
     SetSizer(mainSizer);
 }
@@ -47,31 +51,79 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
     serial::Serial dfuSerial;
     dfuSerial.setPort(g_settings.serialPort);
     dfuSerial.setBaudrate(921600);
+    dfuSerial.setTimeout(1000, 1000, 50, 1000, 50);
     dfuSerial.open();
     if (!dfuSerial.isOpen())
     {
-        wxMessageBox("Unable to open COM for Firmware Update", "Error", wxICON_ERROR | wxOK);
+        wxMessageBox("Unable to open COM for firmware update", "Error", wxICON_ERROR | wxOK);
+        dfuSerial.close();
         return;
     }
 
     std::ifstream fileStream;
     fileStream.open(filePath.c_str().AsWChar(), std::ifstream::binary | std::ifstream::in);
-    SendPacket(dfuSerial, Packets::EraseFlash());
-    currentProgress->WriteText("Erasing Flash\r\n");
-    dfuSerial.read(64);
-    currentProgress->WriteText("Erased Flash\r\n");
-    int i = 0;
+    fileStream.seekg(std::ios::end);
+    uint32_t fileSize = fileStream.tellg();
+    uint32_t totalChunks = std::ceilf((((float)fileSize)/56.0f));
+    fileStream.seekg(std::ios::beg);
+    uint8_t buffer[64];
+    uint8_t retries = 0;
+    uint16_t progress = 0;
+    uint8_t bytesRead = 0;
     do
     {
-        char buf[60];
-        memset(buf, 0, 60);
-        fileStream.read(buf, 60);
-        SendPacket(dfuSerial, Packets::FirmwareChunk((uint8_t*)buf, 60));
-        currentProgress->WriteText("Writing chunk \r\n");
-        dfuSerial.read(64);
-        currentProgress->WriteText("Wrote chunk \r\n");
+        currentProgress->SetLabelText("Erasing Flash...");
+        SendPacket(dfuSerial, Packets::EraseFlash());
+        unsigned long long startTime = time_now;
+        while(dfuSerial.available() < 64 && startTime + 2000 > time_now) {std::this_thread::yield();}
+        bytesRead = dfuSerial.read(buffer, 64);
+        retries++;
+    } while (bytesRead < 64 && retries < 20);
+    if(bytesRead < 64)
+    {
+        wxMessageBox("Unable to erase flash", "Error", wxICON_ERROR | wxOK);
+        dfuSerial.close();
+        fileStream.close();
+        return;
+    }
+    retries = 0;
+    bytesRead = 0;
+    currentProgress->SetLabelText("Flash Erased");
+    progress += 200;
+    progressGauge->SetValue((progress) * (100.0f/((float)200.0f)));
+    uint32_t chunkNum = 0;
+    do
+    {
+        char buf[56];
+        memset(buf, 0, 56);
+        fileStream.read(buf, 56);
+        do
+        {
+            currentProgress->SetLabelText(string_format("Writing Chunk %i of %i...", chunkNum, totalChunks));
+            SendPacket(dfuSerial, Packets::FirmwareChunk(chunkNum, (uint8_t*)buf, 56));
+            unsigned long long startTime = time_now;
+            while(dfuSerial.available() < 64 && startTime + 1000 > time_now) {std::this_thread::yield();}
+            bytesRead = dfuSerial.read(buffer, 64);
+            retries++;
+        } while (bytesRead < 64 && retries < 5);
+        if(bytesRead < 64)
+        {
+            wxMessageBox(string_format("Unable to write chunk %i", chunkNum), "Error", wxICON_ERROR | wxOK);
+            dfuSerial.close();
+            fileStream.close();
+            return;
+        }
+        retries = 0;
+        bytesRead = 0;
+        chunkNum++;
+        progress++;
+        progressGauge->SetValue((progress) * (100.0f/((float)chunkNum+200.0f)));
     } while (!fileStream.eof());
     fileStream.close();
+    
+    SendPacket(dfuSerial, Packets::SystemReset());
+
+    dfuSerial.close();
 
     /* CUBE PROGRAMMER API (DID NOT WORK IN TESTING)
     dfuDeviceInfo* dfuDeviceList;
