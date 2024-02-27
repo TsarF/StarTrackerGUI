@@ -42,11 +42,14 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         // Get the selected file path
         filePath = openFileDialog.GetPath();
     }
+    if(g_serialPort.isOpen())
+    {
+        uint8_t msg_id = QueuePacket(Packets::EnterBootloader());
+        GetPacket(g_serialPort, msg_id);
+        g_serialPort.close();
 
-    //QueuePacket(Packets::EnterBootloader());
-    //g_serialPort.close();
-
-    //Sleep(3000);
+        Sleep(3000);
+    }
 
     serial::Serial dfuSerial;
     dfuSerial.setPort(g_settings.serialPort);
@@ -62,20 +65,21 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
 
     std::ifstream fileStream;
     fileStream.open(filePath.c_str().AsWChar(), std::ifstream::binary | std::ifstream::in);
-    fileStream.seekg(std::ios::end);
-    uint32_t fileSize = fileStream.tellg();
-    uint32_t totalChunks = std::ceilf((((float)fileSize)/56.0f));
-    fileStream.seekg(std::ios::beg);
+    fileStream.ignore( std::numeric_limits<std::streamsize>::max() );
+    uint32_t fileSize = fileStream.gcount();
+    fileStream.clear();   //  Since ignore will have set eof.
+    fileStream.seekg( 0, std::ios_base::beg );
+    uint32_t totalChunks = std::ceilf((((float)fileSize)/56.0f))-1;
     uint8_t buffer[64];
     uint8_t retries = 0;
     uint16_t progress = 0;
     uint8_t bytesRead = 0;
     do
     {
-        currentProgress->SetLabelText("Erasing Flash...");
+        currentProgress->SetLabelText("Status: Erasing Flash...");
         SendPacket(dfuSerial, Packets::EraseFlash());
         unsigned long long startTime = time_now;
-        while(dfuSerial.available() < 64 && startTime + 2000 > time_now) {std::this_thread::yield();}
+        while(dfuSerial.available() < 64 && startTime + 20000 > time_now) {std::this_thread::yield();}
         bytesRead = dfuSerial.read(buffer, 64);
         retries++;
     } while (bytesRead < 64 && retries < 20);
@@ -88,7 +92,7 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
     }
     retries = 0;
     bytesRead = 0;
-    currentProgress->SetLabelText("Flash Erased");
+    currentProgress->SetLabelText("Status: Flash Erased");
     progress += 200;
     progressGauge->SetValue((progress) * (100.0f/((float)200.0f)));
     uint32_t chunkNum = 0;
@@ -99,7 +103,7 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         fileStream.read(buf, 56);
         do
         {
-            currentProgress->SetLabelText(string_format("Writing Chunk %i of %i...", chunkNum, totalChunks));
+            currentProgress->SetLabelText(string_format("Status: Writing Chunk %i of %i...", chunkNum, totalChunks));
             SendPacket(dfuSerial, Packets::FirmwareChunk(chunkNum, (uint8_t*)buf, 56));
             unsigned long long startTime = time_now;
             while(dfuSerial.available() < 64 && startTime + 1000 > time_now) {std::this_thread::yield();}
@@ -117,7 +121,8 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         bytesRead = 0;
         chunkNum++;
         progress++;
-        progressGauge->SetValue((progress) * (100.0f/((float)chunkNum+200.0f)));
+        progressGauge->SetValue((progress) * (100.0f/((float)totalChunks+200.0f)));
+        Update();
     } while (!fileStream.eof());
     fileStream.close();
     
