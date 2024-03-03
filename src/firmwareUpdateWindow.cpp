@@ -6,6 +6,7 @@
 
 #include <istream>
 #include <fstream>
+#include <thread>
 
 FirmwareUpdateFrame::FirmwareUpdateFrame() : wxDialog(nullptr, wxID_ANY, "Firmware Update")
 {
@@ -44,11 +45,12 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
     }
     if(g_serialPort.isOpen())
     {
-        uint8_t msg_id = QueuePacket(Packets::EnterBootloader());
+        Message_t msg = Packets::EnterBootloader();
+        uint8_t msg_id = QueuePacket(msg);
         GetPacket(g_serialPort, msg_id);
         g_serialPort.close();
 
-        Sleep(3000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     }
 
     serial::Serial dfuSerial;
@@ -64,7 +66,7 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
     }
 
     std::ifstream fileStream;
-    fileStream.open(filePath.c_str().AsWChar(), std::ifstream::binary | std::ifstream::in);
+    fileStream.open(filePath.c_str(), std::ifstream::binary | std::ifstream::in);
     fileStream.ignore( std::numeric_limits<std::streamsize>::max() );
     uint32_t fileSize = fileStream.gcount();
     fileStream.clear();   //  Since ignore will have set eof.
@@ -77,9 +79,10 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
     do
     {
         currentProgress->SetLabelText("Status: Erasing Flash...");
-        SendPacket(dfuSerial, Packets::EraseFlash());
+        Message_t msg = Packets::EraseFlash();
+        SendPacket(dfuSerial, msg);
         unsigned long long startTime = time_now;
-        while(dfuSerial.available() < 64 && startTime + 20000 > time_now) {std::this_thread::yield();}
+        while (dfuSerial.available() < 64 && startTime + 20000 > time_now) { std::this_thread::yield(); }
         bytesRead = dfuSerial.read(buffer, 64);
         retries++;
     } while (bytesRead < 64 && retries < 20);
@@ -104,7 +107,8 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         do
         {
             currentProgress->SetLabelText(string_format("Status: Writing Chunk %i of %i...", chunkNum, totalChunks));
-            SendPacket(dfuSerial, Packets::FirmwareChunk(chunkNum, (uint8_t*)buf, 56));
+            Message_t msg = Packets::FirmwareChunk(chunkNum, (uint8_t*)buf, 56);
+            SendPacket(dfuSerial, msg);
             unsigned long long startTime = time_now;
             while(dfuSerial.available() < 64 && startTime + 1000 > time_now) {std::this_thread::yield();}
             bytesRead = dfuSerial.read(buffer, 64);
@@ -125,8 +129,9 @@ void FirmwareUpdateFrame::OnUpload(wxCommandEvent& event)
         Update();
     } while (!fileStream.eof());
     fileStream.close();
-    
-    SendPacket(dfuSerial, Packets::SystemReset());
+
+    Message_t msg = Packets::SystemReset();
+    SendPacket(dfuSerial, msg);
 
     dfuSerial.close();
 

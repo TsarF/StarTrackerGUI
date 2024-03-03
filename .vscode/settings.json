@@ -110,6 +110,6 @@
         "string_view": "cpp"
     },
 
-    "cmake.generator": "Visual Studio 16",
+    "cmake.generator": "Xcode",
     "VCPKG_ROOT": "C:\\vcpkg"
 }

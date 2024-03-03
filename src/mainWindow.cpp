@@ -94,7 +94,8 @@ PolarAlignmentTab::PolarAlignmentTab(wxNotebook* parent) : wxPanel(parent, wxID_
 
 void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 {
-    uint8_t msg_id = QueuePacket(Packets::GetHWState());
+    Message_t msg = Packets::GetHWState();
+    uint8_t msg_id = QueuePacket(msg);
     if(!GetPacket(g_serialPort, msg_id))
     {
         wxMessageBox("Unable to get a response", "Error", wxICON_ERROR | wxOK);
@@ -113,7 +114,8 @@ void PolarAlignmentTab::OnStar1Acquire(wxCommandEvent& event)
 
 void PolarAlignmentTab::OnStar2Acquire(wxCommandEvent& event)
 {
-    uint8_t msg_id = QueuePacket(Packets::GetHWState());
+    Message_t msg = Packets::GetHWState();
+    uint8_t msg_id = QueuePacket(msg);
     if (!GetPacket(g_serialPort, msg_id))
     {
         wxMessageBox("Unable to get a response", "Error", wxICON_ERROR | wxOK);
@@ -180,8 +182,10 @@ void PolarAlignmentTab::OnCalibrate(wxCommandEvent& event)
         g_calibrationData.star2[2], g_calibrationData.star2.head<2>(), g_calibrationData.star2Observed.head<2>());
     
     g_inverseCalibrationMatrix = g_calibrationMatrix.inverse();
-    QueuePacket(Packets::WriteCalibration(g_calibrationMatrix));
-    QueuePacket(Packets::WriteInvCalibration(g_inverseCalibrationMatrix));
+    Message_t msg_cal = Packets::WriteCalibration(g_calibrationMatrix);
+    QueuePacket(msg_cal);
+    Message_t msg_inv = Packets::WriteInvCalibration(g_inverseCalibrationMatrix);
+    QueuePacket(msg_inv);
 }
 
 MosaicTab::MosaicTab(wxNotebook* parent) : wxPanel(parent, wxID_ANY)
@@ -277,8 +281,11 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
         serialComboBox->Append(g_availableSerialPorts[i].c_str());
     }
     serialComboBox->Refresh();
-    serialComboBox->SetSelection(std::find(g_availableSerialPorts.begin(), g_availableSerialPorts.end(), g_settings.serialPort) - g_availableSerialPorts.begin());
-    //serialComboBox->WriteText(g_settings.serialPort);
+    if (!g_settings.serialPort.empty())
+    {
+        serialComboBox->SetSelection(std::find(g_availableSerialPorts.begin(), g_availableSerialPorts.end(), g_settings.serialPort) - g_availableSerialPorts.begin());
+    }
+        //serialComboBox->WriteText(g_settings.serialPort);
 
     toolSizer->Add(serialSizer, 0, wxALL | wxSHRINK, 3);
     gridSizer->Add(toolSizer, 0, wxALL | wxEXPAND, 3);
@@ -314,7 +321,7 @@ MainFrame::MainFrame() : wxFrame(nullptr, wxID_ANY, "Star Tracker Utility")
 void MainFrame::UpdateStatus()
 {
     std::string statusStr;
-    statusStr += "Device:\t";
+    statusStr += "Device:\t\t\t";
     if (g_serialPort.isOpen())
     {
         statusStr += "Connected";
@@ -326,11 +333,12 @@ void MainFrame::UpdateStatus()
     statusLabels[0]->SetLabelText(wxString(statusStr));
     statusStr = "";
 
-    statusStr += "Joystick:\t";
+    statusStr += "Joystick:\t\t\t";
     if (wxWidgetsjoystick->IsOk()  && g_serialPort.isOpen())
     {
         statusStr += "Connected";
-        uint8_t msg_id = QueuePacket(Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons));
+        Message_t msg = Packets::Joystick(joy.joySpeedX, joy.joySpeedY, joy.speedModifier, joy.joyButtons);
+        uint8_t msg_id = QueuePacket(msg);
         //GetPacket(g_serialPort, msg_id);
     }
     else
@@ -340,12 +348,12 @@ void MainFrame::UpdateStatus()
     statusLabels[1]->SetLabelText(wxString(statusStr));
     statusStr = "";
 
-    statusStr += "RA:\t";
+    statusStr += "RA:\t\t\t\t";
     statusStr += string_format("%.4f", g_HWstate.positionRA);
     statusLabels[2]->SetLabelText(wxString(statusStr));
     statusStr = "";
 
-    statusStr += "DEC:\t";
+    statusStr += "DEC:\t\t\t";
     statusStr += string_format("%.4f", g_HWstate.positionDEC);
     statusLabels[3]->SetLabelText(wxString(statusStr));
     statusStr = "";
@@ -400,7 +408,8 @@ void MainFrame::SerialHeartbeat()
 {
     try
     {
-        QueuePacket(Packets::ACK());
+        Message_t msg = Packets::ACK();
+        QueuePacket(msg);
         g_serialHeartbeatSeconds++;
         if (g_serialHeartbeatSeconds > SERIAL_TIMEOUT_SECONDS)
         {
@@ -429,7 +438,8 @@ void MainFrame::OnUpdateTimer(wxTimerEvent& event)
         if (g_serialPort.isOpen())
         {
             SerialHeartbeat();
-            QueuePacket(Packets::GetHWState());
+            Message_t msg = Packets::GetHWState();
+            QueuePacket(msg);
         }
     }
 }
@@ -473,7 +483,8 @@ void MainFrame::OnConnect(wxCommandEvent& event)
             g_serialHeartbeatSeconds = 0;
             g_serialPort.flushOutput();
             g_serialPort.flushInput();
-            uint8_t msg_id = QueuePacket(Packets::GetHWState());
+            Message_t msg = Packets::GetHWState();
+            uint8_t msg_id = QueuePacket(msg);
             GetPacket(g_serialPort, msg_id);
         }
     }

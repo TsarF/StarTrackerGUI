@@ -9,7 +9,7 @@
 #include "astroUtils.h"
 
 
-#define SOFTWARE_VERSION 1,0,0,0
+#define SOFTWARE_VERSION 1,2,0,24
 
 #define SERIAL_TIMEOUT_SECONDS 5
 
